@@ -2,7 +2,6 @@
 
 An end-to-end automated workflow built in **n8n** that scrapes daily LinkedIn job postings, filters out previously seen listings deterministically, evaluates relevance using **Google Gemini**, and delivers a single formatted HTML digest via **Gmail OAuth2**.
 
-![Workflow Architecture](workflow-screenshot.png)
 
 ## Why I Built This
 Manually checking LinkedIn daily for *Werkstudent* (working student) positions is repetitive and noisy. I built this pipeline to automate discovery while avoiding two common AI automation pitfalls:
