@@ -1,0 +1,359 @@
+{
+  "name": "Linkedin Job Scrapper",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -80,
+        32
+      ],
+      "id": "417cd6b2-fae6-4974-8422-4129e47a5010",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "actorSource": "store",
+        "actorId": {
+          "__rl": true,
+          "value": "BHzefUZlZRKWxkTck",
+          "mode": "list",
+          "cachedResultName": "🔥 LinkedIn Jobs Scraper (bebity/linkedin-jobs-scraper)",
+          "cachedResultUrl": "https://console.apify.com/actors/BHzefUZlZRKWxkTck/input"
+        },
+        "customBody": "{\n    \"companyProfile\": true,\n    \"easyApply\": false,\n    \"enrichCompany\": false,\n    \"locations\": [\n        \"Frankfurt am Main\"\n    ],\n    \"publishedAt\": \"r86400\",\n    \"rows\": 100,\n    \"titles\": [\n        \"Werkstudent Softwareentwicklung\"\n    ],\n    \"under10Applicants\": false\n}",
+        "timeout": {},
+        "maxTotalChargeUsd": 0.25
+      },
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 2,
+      "position": [
+        144,
+        32
+      ],
+      "id": "198c5e25-b777-4094-9091-c86f857d690a",
+      "name": "Run an Actor",
+      "credentials": {
+        "apifyApi": {
+          "id": "FuA789VzdslD193w",
+          "name": "Apify account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "Datasets",
+        "datasetId": "={{ $json.defaultDatasetId }}",
+        "options": {}
+      },
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 2,
+      "position": [
+        368,
+        32
+      ],
+      "id": "f6f89d3f-575d-46a4-ba1b-3391d1086128",
+      "name": "Get dataset items",
+      "credentials": {
+        "apifyApi": {
+          "id": "FuA789VzdslD193w",
+          "name": "Apify account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "removeItemsSeenInPreviousExecutions",
+        "dedupeValue": "={{ $json.id }}",
+        "options": {
+          "historySize": 2000
+        }
+      },
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        592,
+        32
+      ],
+      "id": "a1dddc60-eb07-47cf-a4ff-d7fd72cc3aa9",
+      "name": "Remove Duplicates"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "jobs",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        816,
+        32
+      ],
+      "id": "8026ed9e-b8e0-4645-9577-364eacd578a6",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "fec0ad68-9f0c-4b61-ab45-2706f64a4da4",
+              "leftValue": "={{ $json.jobs }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        1040,
+        32
+      ],
+      "id": "fa3b448b-fc2f-4a0c-a1be-858f3890db0d",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are my personal job search assistant. Review the new Werkstudent job listings below and select the best matches for my profile: [Insert your degree/skills, e.g., Computer Science, Python, Data Analysis, English/German].\n\nFor each matching job, output clean HTML with:\n- Job Title & Company Name\n- Location\n- A 2-sentence summary of the role and why it fits\n- A clickable <a href=\"...\">Apply Link</a> using the jobUrl field\n\nDo not include markdown code fences (```html). Output raw HTML only.\n\nJobs JSON:\n{{ JSON.stringify($json.jobs.map(j => ({ title: j.title, company: j.companyName, location: j.location, url: j.jobUrl, description: j.description?.slice(0, 1500) }))) }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1264,
+        -32
+      ],
+      "id": "343bda1f-dad1-43dd-bd43-2f32c344a168",
+      "name": "AI Agent",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        1264,
+        160
+      ],
+      "id": "3a4317ab-7bfc-492a-a253-cd8ca7d8b9dc",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "3YHIF12iJ1QUl7US",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "your-email@example.com",
+        "subject": "=New Werkstudent Jobs in Frankfurt - {{ $now.format('dd MMM') }}",
+        "message": "={{ $json.output }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1632,
+        -32
+      ],
+      "id": "508e3f6b-e1b8-431b-925d-e0d39fd090f2",
+      "name": "Send a message",
+      "webhookId": "f60e90a6-ddf4-4860-94b3-d3ee6d7dc11f",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Zae3SAm03TFPGU1U",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "### 1. Daily LinkedIn Job Scraping\n- **Trigger:** Runs automatically every morning at 8:00 AM.\n- **Data Ingestion:** Calls the Apify LinkedIn Jobs Scraper API for *Werkstudent* roles in Frankfurt posted in the last 24 hours (`r86400`), then retrieves the raw dataset items."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        80,
+        -144
+      ],
+      "id": "ea3f984f-83f1-48bc-8e58-862a1887a9dc",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "### 2. Deterministic Deduplication & Batching\n- **State Tracking:** Filters out any job IDs already processed in previous runs so duplicate listings are never sent twice (zero LLM tokens wasted on deduplication).\n- **Batching & Guard:** Aggregates all newly discovered jobs into a single array and stops execution cleanly if 0 new jobs were found."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        720,
+        -144
+      ],
+      "id": "c22087f7-54ae-4e41-aed5-35e7364bcc59",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "### 3. AI Relevance Filtering & HTML Formatting\n- **Semantic Screening:** Evaluates new job descriptions against target skills and filters out irrelevant or non-student roles.\n- **Structured Output:** Generates a clean, mobile-friendly HTML digest with role summaries and direct application links."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1248,
+        -224
+      ],
+      "id": "33b493d4-34b7-42a1-9153-4f4c5646be7d",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "### 4. Automated Email Delivery\n- Sends a single daily HTML email digest via Gmail OAuth2 containing only fresh, vetted job matches."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1616,
+        144
+      ],
+      "id": "0859a1c4-45ff-45cd-96de-45d269983af5",
+      "name": "Sticky Note3"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run an Actor": {
+      "main": [
+        [
+          {
+            "node": "Get dataset items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Run an Actor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get dataset items": {
+      "main": [
+        [
+          {
+            "node": "Remove Duplicates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Duplicates": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "4f37fd96-1b2d-41a9-9b8c-af7ebf98c3f0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b76dd551c87d93acfc4d530f49d1dd9a001a0506ab3a3f78e2ae3436a5f7a69b"
+  },
+  "nodeGroups": [],
+  "id": "sxxqf1q1Nyy5hEaK",
+  "tags": []
+}
